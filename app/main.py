@@ -1,7 +1,8 @@
-
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 import json, os, re
+from dotenv import load_dotenv
+load_dotenv()
 
 app = FastAPI(title="Phase 1 Mock API")
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -15,9 +16,21 @@ ORDERS = load("orders.json")
 ISSUES = load("issues.json")
 REPLIES = load("replies.json")
 
+from app.graph import build_graph
+GRAPH = build_graph()
+
+
 class TriageInput(BaseModel):
     ticket_text: str
     order_id: str | None = None
+    messages: list[dict] = []
+    issue_type: str | None = None
+    evidence: dict = {}
+    recommendation: str | None = None
+    needs_admin: bool | None = None
+    admin_decision: str | None = None
+    admin_notes: str | None = None
+    reply_draft: str | None = None
 
 @app.get("/health")
 def health(): return {"status": "ok"}
@@ -57,14 +70,7 @@ def reply_draft(payload: dict):
 
 @app.post("/triage/invoke")
 def triage_invoke(body: TriageInput):
-    text = body.ticket_text
-    order_id = body.order_id
-    if not order_id:
-        m = re.search(r"(ORD\d{4})", text, re.IGNORECASE)
-        if m: order_id = m.group(1).upper()
-    if not order_id: raise HTTPException(status_code=400, detail="order_id missing and not found in text")
-    order = next((o for o in ORDERS if o["order_id"] == order_id), None)
-    if not order: raise HTTPException(status_code=404, detail="order not found")
-    issue = classify_issue({"ticket_text": text})
-    reply = reply_draft({"ticket_text": text, "order": order, "issue_type": issue["issue_type"]})
-    return {"order_id": order_id, "issue_type": issue["issue_type"], "order": order, "reply_text": reply["reply_text"]}
+    state = body.model_dump()
+    result = GRAPH.invoke(state)
+    return result
+
