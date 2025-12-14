@@ -1,7 +1,9 @@
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 import json, os, re
+from langfuse.decorators import observe, langfuse_context
 from dotenv import load_dotenv
+import time
 load_dotenv()
 
 app = FastAPI(title="Phase 1 Mock API")
@@ -68,9 +70,25 @@ def render_reply(issue_type: str, order):
 def reply_draft(payload: dict):
     return {"reply_text": render_reply(payload.get("issue_type"), payload.get("order", {}))}
 
+
 @app.post("/triage/invoke")
+@observe()
 def triage_invoke(body: TriageInput):
     state = body.model_dump()
-    result = GRAPH.invoke(state)
-    return result
 
+    langfuse_context.update_current_trace(
+        name="triage_invoke",
+        input=state,
+        metadata={
+            "order_id": state.get("order_id"),
+            "issue_type": state.get("issue_type"),
+            "needs_admin": state.get("needs_admin"),
+            "admin_decision": state.get("admin_decision"),
+        },
+        tags=["phase1", "triage"],
+    )
+
+    result = GRAPH.invoke(state)
+
+    langfuse_context.update_current_trace(output=result)
+    return result

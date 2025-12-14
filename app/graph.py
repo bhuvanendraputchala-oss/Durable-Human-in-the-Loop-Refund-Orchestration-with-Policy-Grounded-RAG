@@ -3,13 +3,12 @@ import json
 import os
 import re
 from typing import Any, Dict, List, Optional
-
+from langfuse.decorators import observe, langfuse_context
 from langgraph.graph import StateGraph, START, END
 
 from .state import TriageState
 from .templates import render_reply
 from .tools import fetch_order
-
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 MOCK_DIR = os.path.join(ROOT, "mock_data")
@@ -35,6 +34,7 @@ def append_issue_keywords(state:TriageState, role:str, message:str) -> None:
     state["messages"] = msgs
 
 
+@observe()
 def ingest(state:TriageState) -> TriageState:
     ticket=(state.get("ticket_text") or "").strip()
     if not ticket:
@@ -60,6 +60,7 @@ def ingest(state:TriageState) -> TriageState:
             state["order_id"] = m.group(1).upper()
     return state
 
+@observe()
 def classify(state:TriageState) -> TriageState:
     # Skip if already classified
     if state.get("issue_type"):
@@ -78,6 +79,7 @@ def classify(state:TriageState) -> TriageState:
     append_issue_keywords(state,"assistant", f"The issue is classified as {issue_type}.")
     return state
 
+@observe()
 def fetch_order_info(state:TriageState) -> TriageState:
     # Skip if order info already fetched
     if state.get("evidence", {}).get("order"):
@@ -93,6 +95,7 @@ def fetch_order_info(state:TriageState) -> TriageState:
     append_issue_keywords(state,"assistant", f"Fetched order details for {order_id}.")
     return state
 
+@observe()
 def propose_recommendation(state:TriageState) -> TriageState:
     # Skip if recommendation already exists
     if state.get("recommendation"):
@@ -127,6 +130,7 @@ def propose_recommendation(state:TriageState) -> TriageState:
     return state
 
 
+@observe()
 def admin_review(state:TriageState) -> TriageState:
     decision=(state.get("admin_decision") or "").strip().lower()
     if decision not in ["approve", "reject"]:
@@ -141,6 +145,7 @@ def admin_review(state:TriageState) -> TriageState:
         state["recommendation"] = "Ask for clarification and escalate to a human agent."
     return state
 
+@observe()
 def draft_reply(state: TriageState) -> TriageState:
     # Skip if reply already drafted
     if state.get("reply_draft"):

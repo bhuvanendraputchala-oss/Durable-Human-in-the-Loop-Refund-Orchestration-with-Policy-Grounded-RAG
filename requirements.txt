@@ -1,6 +1,8 @@
 fastapi==0.115.0
 uvicorn==0.30.6
 pydantic==2.9.2
-
 langgraph==0.2.32
 langchain-core==0.2.39
+langfuse==2.60.0
+python-dotenv==1.0.1
+pytest==8.3.4
