@@ -1,10 +1,11 @@
 from __future__ import annotations
+
 from typing import TypedDict, List, Dict, Any, Optional
+from langchain_core.messages import AnyMessage
 
 
 class TriageState(TypedDict, total=False):
-    """State schema for the triage graph."""
-    messages: List[Dict[str, str]]
+    messages: List[AnyMessage]
     ticket_text: str
     evidence: Dict[str, Any]
     order_id: Optional[str]

@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 import json, os, re
 from langfuse.decorators import observe, langfuse_context
+from typing import Any, Dict, List, Optional, TypedDict
+from langchain_core.messages import AnyMessage
 from dotenv import load_dotenv
 import time
 load_dotenv()
@@ -23,6 +25,7 @@ GRAPH = build_graph()
 
 
 class TriageInput(BaseModel):
+    messages: List[AnyMessage]
     ticket_text: str
     order_id: str | None = None
     messages: list[dict] = []
