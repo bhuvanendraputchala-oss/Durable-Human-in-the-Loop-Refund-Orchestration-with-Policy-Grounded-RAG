@@ -147,3 +147,9 @@ Graph nodes are instrumented with `Langfuse.observe` for basic tracing.
 Set the standard Langfuse environment variables before running the API to enable traces in your Langfuse project.
 
 
+
+
+
+## How I used Cursor or Claude Code:
+
+I used Cursor to speed up iteration while keeping the architecture intentional. I first wrote a quick plan for the state schema and graph control flow, then used Cursor for small refactors and to quickly validate imports and LangGraph wiring. I used it as an accelerator, not as a replacement for reasoning about control flow and state transitions.
