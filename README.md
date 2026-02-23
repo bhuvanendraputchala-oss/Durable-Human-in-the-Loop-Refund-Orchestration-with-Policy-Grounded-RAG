@@ -361,7 +361,3 @@ This pattern means the process can be stopped between steps 1 and 3 — even acr
 Graph nodes are instrumented with `langfuse.observe`. Set the `LANGFUSE_*` environment variables before starting the server to enable tracing in your Langfuse project. If the variables are absent, the application runs normally without tracing.
 
 ---
-
-## How I Used Claude Code / Cursor
-
-I used Claude Code as an accelerator for implementation and iteration while keeping the architecture intentional. The graph control flow, state schema, and interrupt/resume design were planned before writing code. Claude Code helped with wiring up LangGraph nodes, validating imports, and structuring the RAG pipeline. I used it as a collaborator on implementation details, not as a replacement for reasoning about control flow and state transitions.
