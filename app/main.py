@@ -1,14 +1,27 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
-import json, os, re
+import json, os, re, uuid
 from langfuse.decorators import observe, langfuse_context
-from typing import Any, Dict, List, Optional, TypedDict
-from langchain_core.messages import AnyMessage
+from typing import Any, Dict, Optional
 from dotenv import load_dotenv
 import time
+
 load_dotenv()
 
-app = FastAPI(title="Phase 1 Mock API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    missing = [v for v in ("OPENAI_API_KEY", "POSTGRES_URI") if not os.getenv(v)]
+    if missing:
+        raise RuntimeError(
+            f"Missing required environment variables: {', '.join(missing)}. "
+        )
+    yield
+
+
+app = FastAPI(title="Phase 1 Mock API", lifespan=lifespan)
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 MOCK_DIR = os.path.join(ROOT, "mock_data")
 
@@ -25,7 +38,6 @@ GRAPH = build_graph()
 
 
 class TriageInput(BaseModel):
-    messages: List[AnyMessage]
     ticket_text: str
     order_id: str | None = None
     messages: list[dict] = []
@@ -36,6 +48,14 @@ class TriageInput(BaseModel):
     admin_decision: str | None = None
     admin_notes: str | None = None
     reply_draft: str | None = None
+    thread_id: str | None = None
+
+
+class ResumeInput(BaseModel):
+    thread_id: str
+    approved: bool
+    reason: str | None = None
+
 
 @app.get("/health")
 def health(): return {"status": "ok"}
@@ -78,11 +98,14 @@ def reply_draft(payload: dict):
 @observe()
 def triage_invoke(body: TriageInput):
     state = body.model_dump()
+    thread_id = state.pop("thread_id", None) or str(uuid.uuid4())
+    config = {"configurable": {"thread_id": thread_id}}
 
     langfuse_context.update_current_trace(
         name="triage_invoke",
         input=state,
         metadata={
+            "thread_id": thread_id,
             "order_id": state.get("order_id"),
             "issue_type": state.get("issue_type"),
             "needs_admin": state.get("needs_admin"),
@@ -91,7 +114,79 @@ def triage_invoke(body: TriageInput):
         tags=["phase1", "triage"],
     )
 
-    result = GRAPH.invoke(state)
+    try:
+        result = GRAPH.invoke(state, config=config)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if result.get("refund_preview") and not result.get("admin_decision"):
+        return {
+            "status": "awaiting_admin",
+            "thread_id": thread_id,
+            "state": result,
+        }
+    return {
+        "status": "completed",
+        "thread_id": thread_id,
+        "state": result,
+    }
+
+
+@app.post("/triage/resume")
+@observe()
+def triage_resume(body: ResumeInput):
+
+    config = {"configurable": {"thread_id": body.thread_id}}
+
+    langfuse_context.update_current_trace(
+        name="triage_resume",
+        input={
+            "thread_id": body.thread_id,
+            "approved": body.approved,
+            "reason": body.reason,
+        },
+        tags=["phase1", "triage", "resume"],
+    )
+
+    try:
+        GRAPH.update_state(
+            config,
+            {
+                "admin_decision": "approve" if body.approved else "reject",
+                "refund_approved": body.approved,
+                "refund_reject_reason": body.reason or "",
+            },
+        )
+        result = GRAPH.invoke(None, config=config)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     langfuse_context.update_current_trace(output=result)
-    return result
+
+    return {
+        "status": "completed",
+        "state": result,
+    }
+
+@app.post("/triage/admin")
+def admin_resume(payload: dict):
+    thread_id = payload["thread_id"]
+    decision = payload["decision"]
+
+    config = {
+        "configurable": {
+            "thread_id": thread_id
+        }
+    }
+    GRAPH.update_state(
+        config,
+        {
+            "admin_decision": decision
+        },
+    )
+    result = GRAPH.invoke(None, config=config)
+
+    return {
+        "status": "completed",
+        "state": result,
+    }

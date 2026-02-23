@@ -6,3 +6,10 @@ langchain-core==0.2.39
 langfuse==2.60.0
 python-dotenv==1.0.1
 pytest==8.3.4
+langchain==0.2.16
+langchain-openai==0.1.23
+langchain-community==0.2.16
+chromadb==0.5.5
+langgraph-checkpoint-postgres==3.0.4
+psycopg[binary]==3.3.3
+psycopg-pool==3.3.0

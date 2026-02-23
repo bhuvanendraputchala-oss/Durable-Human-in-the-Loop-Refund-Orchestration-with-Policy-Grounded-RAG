@@ -26,5 +26,9 @@
   {
     "issue_type": "defective_product",
     "template": "Hi {{customer_name}}, we are sorry your product is not working. We will honor the warranty for order {{order_id}}."
+  },
+  {
+    "issue_type": "warranty",
+    "template": "Hi {{customer_name}}, we have confirmed a warranty claim for order {{order_id}}. A replacement will be arranged for you."
   }
 ]

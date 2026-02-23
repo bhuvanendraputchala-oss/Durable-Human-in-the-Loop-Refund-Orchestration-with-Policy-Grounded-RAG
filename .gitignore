@@ -4,3 +4,12 @@ __pycache__/
 *.pyo
 *.pyd
 .pytest_cache/
+
+# Virtual environment
+venv/
+
+# Environment variables (secrets)
+.env
+
+# ChromaDB vector store (auto-generated, large binaries)
+vector_db/

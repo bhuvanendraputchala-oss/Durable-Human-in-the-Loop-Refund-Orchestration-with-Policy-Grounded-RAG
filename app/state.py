@@ -15,3 +15,11 @@ class TriageState(TypedDict, total=False):
     admin_decision: Optional[str]
     admin_notes: Optional[str]
     reply_draft: Optional[str]
+    rag_docs: list
+    citations: list
+    policy_decision: str
+    policy_allowed: Optional[bool]
+    refund_preview: Optional[Dict[str, Any]]
+    refund_approved: Optional[bool]
+    refund_reject_reason: Optional[str]
+    remedy_result: Optional[Dict[str, Any]]
