@@ -1,4 +1,4 @@
-# Phase 2 LangGraph Customer Support Triage Agent
+# LangGraph Customer Support Triage Agent
 
 A production-grade AI-powered customer support triage system built with LangGraph. The agent automatically classifies support tickets, retrieves relevant company policies via RAG, evaluates policy compliance, proposes refunds with a human approval gate, commits approved refunds, and generates policy-cited customer reply drafts: all with durable PostgreSQL-backed state that survives process restarts.
 
